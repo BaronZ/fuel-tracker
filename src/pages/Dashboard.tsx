@@ -87,6 +87,13 @@ export default function Dashboard() {
             ],
           },
         },
+        label: {
+          show: true,
+          position: 'top',
+          formatter: (p: { value: number }) => `${p.value.toFixed(1)}`,
+          fontSize: 11,
+          color: '#1890ff',
+        },
         markLine: stats?.avgConsumption
           ? {
               data: [{ yAxis: stats.avgConsumption, name: '平均' }],
@@ -131,6 +138,13 @@ export default function Dashboard() {
           },
           borderRadius: [4, 4, 0, 0],
         },
+        label: {
+          show: true,
+          position: 'top',
+          formatter: (p: { value: number }) => `¥${p.value.toFixed(0)}`,
+          fontSize: 11,
+          color: '#1890ff',
+        },
       },
     ],
   };
@@ -169,6 +183,13 @@ export default function Dashboard() {
               { offset: 1, color: 'rgba(250,173,20,0.02)' },
             ],
           },
+        },
+        label: {
+          show: true,
+          position: 'top',
+          formatter: (p: { value: number }) => `¥${p.value.toFixed(2)}`,
+          fontSize: 11,
+          color: '#faad14',
         },
       },
     ],
