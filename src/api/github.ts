@@ -113,6 +113,25 @@ export async function saveRepoConfig(owner: string, config: RepoConfig): Promise
   await putFile(owner, 'config.json', JSON.stringify(config, null, 2), '📝 更新车辆配置', existing?.sha);
 }
 
+/** 列出车辆已有数据的年份 */
+export async function listVehicleYears(owner: string, vehicleId: string): Promise<number[]> {
+  const client = getClient();
+  try {
+    const { data } = await client.get(`/repos/${owner}/${REPO_NAME}/contents/data/${vehicleId}`);
+    if (!Array.isArray(data)) return [];
+    const years = data
+      .filter((item: { type: string; name: string }) => item.type === 'file' && /^\d{4}\.json$/.test(item.name))
+      .map((item: { name: string }) => parseInt(item.name.replace('.json', ''), 10))
+      .sort((a: number, b: number) => a - b);
+    return years;
+  } catch (error: unknown) {
+    if (axios.isAxiosError(error) && error.response?.status === 404) {
+      return [];
+    }
+    throw error;
+  }
+}
+
 /** 读取年度数据 */
 export async function getYearData(owner: string, vehicleId: string, year: number): Promise<YearData | null> {
   const path = `data/${vehicleId}/${year}.json`;

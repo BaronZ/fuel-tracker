@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { getYearData, addRefuelRecord, updateRefuelRecord, deleteRefuelRecord } from '@/api/github';
+import { getYearData, addRefuelRecord, updateRefuelRecord, deleteRefuelRecord, listVehicleYears } from '@/api/github';
 import { calculateConsumptions } from '@/utils/consumption';
 import type { RefuelRecord, RefuelRecordWithConsumption, YearData } from '@/types';
 
@@ -7,12 +7,14 @@ interface FuelState {
   yearData: YearData | null;
   recordsWithConsumption: RefuelRecordWithConsumption[];
   loading: boolean;
+  availableYears: number[];
 
   loadYearData: (owner: string, vehicleId: string, year: number) => Promise<void>;
   loadDateRange: (owner: string, vehicleId: string, startDate: string, endDate: string) => Promise<void>;
   addRecord: (owner: string, vehicleId: string, record: RefuelRecord) => Promise<void>;
   updateRecord: (owner: string, vehicleId: string, record: RefuelRecord) => Promise<void>;
   deleteRecord: (owner: string, vehicleId: string, recordId: string) => Promise<void>;
+  loadAvailableYears: (owner: string, vehicleId: string) => Promise<void>;
   clearData: () => void;
 }
 
@@ -20,6 +22,7 @@ export const useFuelStore = create<FuelState>((set, get) => ({
   yearData: null,
   recordsWithConsumption: [],
   loading: false,
+  availableYears: [],
 
   loadYearData: async (owner: string, vehicleId: string, year: number) => {
     set({ loading: true });
@@ -106,7 +109,17 @@ export const useFuelStore = create<FuelState>((set, get) => ({
     }
   },
 
+  loadAvailableYears: async (owner: string, vehicleId: string) => {
+    try {
+      const years = await listVehicleYears(owner, vehicleId);
+      set({ availableYears: years });
+    } catch (error) {
+      console.error('Failed to load available years:', error);
+      set({ availableYears: [] });
+    }
+  },
+
   clearData: () => {
-    set({ yearData: null, recordsWithConsumption: [] });
+    set({ yearData: null, recordsWithConsumption: [], availableYears: [] });
   },
 }));

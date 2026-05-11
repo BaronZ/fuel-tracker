@@ -22,7 +22,7 @@ const { Title, Text } = Typography;
 export default function Dashboard() {
   const navigate = useNavigate();
   const { user, config } = useAuthStore();
-  const { recordsWithConsumption, loadDateRange, loading } = useFuelStore();
+  const { recordsWithConsumption, loadDateRange, loading, availableYears, loadAvailableYears } = useFuelStore();
   const [stats, setStats] = useState<ReturnType<typeof calculateStats> | null>(null);
   const [monthlyCosts, setMonthlyCosts] = useState<ReturnType<typeof calculateMonthlyCosts>>([]);
   const [startDate, setStartDate] = useState(dayjs().startOf('year'));
@@ -30,6 +30,12 @@ export default function Dashboard() {
   const isMobile = useMobile();
 
   const defaultVehicle = config?.vehicles.find((v) => v.isDefault) || config?.vehicles[0];
+
+  useEffect(() => {
+    if (user?.login && defaultVehicle) {
+      loadAvailableYears(user.login, defaultVehicle.id);
+    }
+  }, [user?.login, defaultVehicle?.id]);
 
   useEffect(() => {
     if (user?.login && defaultVehicle) {
@@ -59,7 +65,8 @@ export default function Dashboard() {
       setStartDate(today.subtract(1, 'year'));
       setEndDate(today);
     } else {
-      setStartDate(dayjs('2010-01-01'));
+      const earliestYear = availableYears.length > 0 ? availableYears[0] : today.year();
+      setStartDate(dayjs(`${earliestYear}-01-01`));
       setEndDate(today);
     }
   };
