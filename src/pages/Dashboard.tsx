@@ -28,7 +28,7 @@ export default function Dashboard() {
   const isMobile = useMobile();
 
   const defaultVehicle = config?.vehicles.find((v) => v.isDefault) || config?.vehicles[0];
-  const yearOptions = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i);
+  const yearOptions = Array.from({ length: 10 }, (_, i) => new Date().getFullYear() - i);
 
   useEffect(() => {
     if (user?.login && defaultVehicle) {
