@@ -32,6 +32,9 @@ jobs:
 
       - name: Build
         run: npm run build
+        env:
+          VITE_GITHUB_CLIENT_ID: ${{ vars.VITE_GITHUB_CLIENT_ID }}
+          VITE_WORKER_URL: ${{ vars.VITE_WORKER_URL }}
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
