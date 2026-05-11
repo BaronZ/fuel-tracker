@@ -1,12 +1,13 @@
 import { useState } from 'react';
-import { Table, Button, Modal, Form, Input, Select, Space, Tag, message, Typography, Popconfirm } from 'antd';
+import { Table, Button, Modal, Form, Input, Select, Space, Tag, message, Typography, Popconfirm, Card } from 'antd';
 import { PlusOutlined, EditOutlined, DeleteOutlined, StarOutlined, StarFilled } from '@ant-design/icons';
 import { v4 as uuidv4 } from 'uuid';
 import { useAuthStore } from '@/store/authStore';
 import { saveRepoConfig } from '@/api/github';
+import { useMobile } from '@/hooks/useMobile';
 import type { Vehicle } from '@/types';
 
-const { Title } = Typography;
+const { Title, Text } = Typography;
 
 const FUEL_TYPE_OPTIONS = [
   { label: '92#', value: '92#' },
@@ -21,6 +22,7 @@ export default function Vehicles() {
   const [editingVehicle, setEditingVehicle] = useState<Vehicle | null>(null);
   const [form] = Form.useForm();
   const [submitting, setSubmitting] = useState(false);
+  const isMobile = useMobile();
 
   const vehicles = config?.vehicles || [];
 
@@ -51,18 +53,16 @@ export default function Vehicles() {
 
       let newVehicles: Vehicle[];
       if (editingVehicle) {
-        // 编辑
         newVehicles = config.vehicles.map((v) =>
           v.id === editingVehicle.id
             ? { ...v, ...values }
             : v
         );
       } else {
-        // 新增
         const newVehicle: Vehicle = {
           id: uuidv4(),
           ...values,
-          isDefault: config.vehicles.length === 0, // 第一辆车默认
+          isDefault: config.vehicles.length === 0,
           createdAt: new Date().toISOString(),
         };
         newVehicles = [...config.vehicles, newVehicle];
@@ -90,7 +90,6 @@ export default function Vehicles() {
 
     try {
       const newVehicles = config.vehicles.filter((v) => v.id !== vehicleId);
-      // 如果删除的是默认车辆，设置第一辆车为默认
       if (!newVehicles.some((v) => v.isDefault) && newVehicles.length > 0) {
         newVehicles[0].isDefault = true;
       }
@@ -171,21 +170,53 @@ export default function Vehicles() {
     },
   ];
 
+  const renderMobileVehicle = (vehicle: Vehicle) => (
+    <Card key={vehicle.id} size="small" style={{ marginBottom: 8 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <div style={{ flex: 1 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <Text strong style={{ fontSize: 15 }}>{vehicle.name}</Text>
+            {vehicle.isDefault && <Tag color="blue">默认</Tag>}
+          </div>
+          <div style={{ color: '#666', fontSize: 13, marginTop: 4 }}>
+            {[vehicle.brand, vehicle.model].filter(Boolean).join(' ')}
+            {vehicle.fuelType && <span style={{ marginLeft: 8 }}>{vehicle.fuelType}</span>}
+          </div>
+        </div>
+        <Space size={4}>
+          {!vehicle.isDefault && (
+            <Button type="text" size="small" icon={<StarOutlined />} onClick={() => setDefault(vehicle.id)} />
+          )}
+          <Button type="text" size="small" icon={<EditOutlined />} onClick={() => openEditModal(vehicle)} />
+          {vehicles.length > 1 && (
+            <Popconfirm title="确认删除此车辆？" onConfirm={() => handleDelete(vehicle.id)}>
+              <Button type="text" size="small" danger icon={<DeleteOutlined />} />
+            </Popconfirm>
+          )}
+        </Space>
+      </div>
+    </Card>
+  );
+
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-        <Title level={4} style={{ margin: 0 }}>车辆管理</Title>
-        <Button type="primary" icon={<PlusOutlined />} onClick={openAddModal}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: isMobile ? 8 : 16 }}>
+        <Title level={4} style={{ margin: 0, fontSize: isMobile ? 16 : undefined }}>车辆管理</Title>
+        <Button type="primary" icon={<PlusOutlined />} onClick={openAddModal} size={isMobile ? 'middle' : 'middle'}>
           添加车辆
         </Button>
       </div>
 
-      <Table
-        dataSource={vehicles}
-        columns={columns}
-        rowKey="id"
-        pagination={false}
-      />
+      {isMobile ? (
+        <div>{vehicles.map(renderMobileVehicle)}</div>
+      ) : (
+        <Table
+          dataSource={vehicles}
+          columns={columns}
+          rowKey="id"
+          pagination={false}
+        />
+      )}
 
       <Modal
         title={editingVehicle ? '编辑车辆' : '添加车辆'}

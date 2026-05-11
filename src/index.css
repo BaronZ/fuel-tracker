@@ -6,3 +6,22 @@ body {
 #root {
   min-height: 100vh;
 }
+
+@media (max-width: 767px) {
+  .ant-card-body {
+    padding: 12px;
+  }
+  .ant-modal {
+    max-width: calc(100vw - 16px) !important;
+    margin: 8px auto !important;
+  }
+  .ant-table-wrapper {
+    overflow-x: auto;
+  }
+  .ant-statistic-content-value {
+    font-size: 20px !important;
+  }
+  .ant-statistic-content-prefix {
+    font-size: 14px !important;
+  }
+}

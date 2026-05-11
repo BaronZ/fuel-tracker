@@ -3,11 +3,13 @@ import { LogoutOutlined, GithubOutlined, DeleteOutlined } from '@ant-design/icon
 import { useAuthStore } from '@/store/authStore';
 import { logout as authLogout } from '@/api/auth';
 import { REPO_NAME } from '@/api/github';
+import { useMobile } from '@/hooks/useMobile';
 
 const { Title, Text, Paragraph } = Typography;
 
 export default function Settings() {
   const { user, config } = useAuthStore();
+  const isMobile = useMobile();
 
   const handleLogout = () => {
     Modal.confirm({
@@ -73,7 +75,7 @@ export default function Settings() {
 
       {/* 单位设置 */}
       <Card title="单位设置" style={{ marginBottom: 16 }}>
-        <Descriptions column={2}>
+        <Descriptions column={isMobile ? 1 : 2}>
           <Descriptions.Item label="货币">{config?.settings.currency || 'CNY'}</Descriptions.Item>
           <Descriptions.Item label="距离单位">{config?.settings.distanceUnit || 'km'}</Descriptions.Item>
           <Descriptions.Item label="油量单位">{config?.settings.fuelUnit || 'L'}</Descriptions.Item>

@@ -13,8 +13,10 @@ import { useAuthStore } from '@/store/authStore';
 import { useFuelStore } from '@/store/fuelStore';
 import { calculateStats, calculateMonthlyCosts } from '@/utils/consumption';
 import { formatCost, formatConsumption } from '@/utils/format';
+import { useMobile } from '@/hooks/useMobile';
+import type { RefuelRecordWithConsumption } from '@/types';
 
-const { Title } = Typography;
+const { Title, Text } = Typography;
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -23,6 +25,7 @@ export default function Dashboard() {
   const [stats, setStats] = useState<ReturnType<typeof calculateStats> | null>(null);
   const [monthlyCosts, setMonthlyCosts] = useState<ReturnType<typeof calculateMonthlyCosts>>([]);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const isMobile = useMobile();
 
   const defaultVehicle = config?.vehicles.find((v) => v.isDefault) || config?.vehicles[0];
   const yearOptions = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i);
@@ -42,6 +45,8 @@ export default function Dashboard() {
       setMonthlyCosts([]);
     }
   }, [recordsWithConsumption]);
+
+  const chartHeight = isMobile ? 220 : 280;
 
   // 油耗趋势折线图
   const consumptionChartOption = {
@@ -201,11 +206,27 @@ export default function Dashboard() {
     );
   }
 
+  const renderMobileRecord = (record: RefuelRecordWithConsumption) => (
+    <Card key={record.id} size="small" style={{ marginBottom: 8 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <Text strong>{record.date}</Text>
+        <Text style={{ color: record.consumption !== null ? '#1890ff' : '#999', fontWeight: 600 }}>
+          {formatConsumption(record.consumption)}
+        </Text>
+      </div>
+      <div style={{ display: 'flex', gap: 12, marginTop: 4, color: '#666', fontSize: 13 }}>
+        <span>{record.odometer.toLocaleString()} km</span>
+        <span>{record.fuelAmount}L</span>
+        <span>{formatCost(record.totalCost)}</span>
+      </div>
+    </Card>
+  );
+
   return (
     <Spin spinning={loading}>
       <div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
-          <Title level={4} style={{ margin: 0 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: isMobile ? 12 : 24 }}>
+          <Title level={4} style={{ margin: 0, fontSize: isMobile ? 16 : undefined }}>
             {defaultVehicle.name} - {selectedYear}年
           </Title>
           <Select
@@ -216,45 +237,49 @@ export default function Dashboard() {
           />
         </div>
 
-        <Row gutter={[16, 16]}>
+        <Row gutter={[isMobile ? 8 : 16, isMobile ? 8 : 16]}>
           <Col xs={12} sm={6}>
-            <Card>
+            <Card size={isMobile ? 'small' : 'default'}>
               <Statistic
                 title="加油次数"
                 value={stats?.totalRefuels || 0}
                 prefix={<DashboardFilled />}
+                valueStyle={isMobile ? { fontSize: 20 } : undefined}
               />
             </Card>
           </Col>
           <Col xs={12} sm={6}>
-            <Card>
+            <Card size={isMobile ? 'small' : 'default'}>
               <Statistic
                 title="总里程"
                 value={stats?.totalDistance || 0}
                 prefix={<DashboardOutlined />}
                 suffix="km"
+                valueStyle={isMobile ? { fontSize: 20 } : undefined}
               />
             </Card>
           </Col>
           <Col xs={12} sm={6}>
-            <Card>
+            <Card size={isMobile ? 'small' : 'default'}>
               <Statistic
                 title="总费用"
                 value={stats?.totalCost || 0}
                 prefix={<DollarOutlined />}
                 precision={2}
                 prefixCls="¥"
+                valueStyle={isMobile ? { fontSize: 20 } : undefined}
               />
             </Card>
           </Col>
           <Col xs={12} sm={6}>
-            <Card>
+            <Card size={isMobile ? 'small' : 'default'}>
               <Statistic
                 title="平均油耗"
                 value={stats?.avgConsumption ?? '-'}
                 prefix={<CarOutlined />}
                 suffix="L/100km"
                 precision={stats?.avgConsumption ? 2 : undefined}
+                valueStyle={isMobile ? { fontSize: 20 } : undefined}
               />
             </Card>
           </Col>
@@ -268,44 +293,45 @@ export default function Dashboard() {
           </Empty>
         ) : (
           <>
-            {/* 油耗趋势 */}
             {recordsWithConsumption.some((r) => r.consumption !== null) && (
-              <Card title="油耗趋势" style={{ marginTop: 16 }}>
-                <ReactECharts option={consumptionChartOption} style={{ height: 280 }} />
+              <Card title="油耗趋势" size={isMobile ? 'small' : 'default'} style={{ marginTop: isMobile ? 8 : 16 }}>
+                <ReactECharts option={consumptionChartOption} style={{ height: chartHeight }} />
               </Card>
             )}
 
-            {/* 月度费用 */}
             {monthlyCosts.length > 0 && (
-              <Card title="月度费用" style={{ marginTop: 16 }}>
-                <ReactECharts option={monthlyCostChartOption} style={{ height: 280 }} />
+              <Card title="月度费用" size={isMobile ? 'small' : 'default'} style={{ marginTop: isMobile ? 8 : 16 }}>
+                <ReactECharts option={monthlyCostChartOption} style={{ height: chartHeight }} />
               </Card>
             )}
 
-            {/* 油价变化 */}
             {recordsWithConsumption.length > 1 && (
-              <Card title="油价变化" style={{ marginTop: 16 }}>
-                <ReactECharts option={priceChartOption} style={{ height: 280 }} />
+              <Card title="油价变化" size={isMobile ? 'small' : 'default'} style={{ marginTop: isMobile ? 8 : 16 }}>
+                <ReactECharts option={priceChartOption} style={{ height: chartHeight }} />
               </Card>
             )}
 
-            {/* 最近加油记录 */}
             <Card
               title="最近加油记录"
-              style={{ marginTop: 16 }}
+              size={isMobile ? 'small' : 'default'}
+              style={{ marginTop: isMobile ? 8 : 16 }}
               extra={
-                <Button type="link" onClick={() => navigate('/refuel/list')}>
+                <Button type="link" size={isMobile ? 'small' : 'middle'} onClick={() => navigate('/refuel/list')}>
                   查看全部
                 </Button>
               }
             >
-              <Table
-                dataSource={recentRecords}
-                columns={columns}
-                rowKey="id"
-                pagination={false}
-                size="small"
-              />
+              {isMobile ? (
+                recentRecords.map(renderMobileRecord)
+              ) : (
+                <Table
+                  dataSource={recentRecords}
+                  columns={columns}
+                  rowKey="id"
+                  pagination={false}
+                  size="small"
+                />
+              )}
             </Card>
           </>
         )}

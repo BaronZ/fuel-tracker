@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Table, Button, Modal, Form, InputNumber, DatePicker, Switch, Input, Select, Space, Tag, message, Typography } from 'antd';
+import { Table, Button, Modal, Form, InputNumber, DatePicker, Switch, Input, Select, Space, Tag, message, Typography, Card } from 'antd';
 import type { SelectProps } from 'antd';
 import { EditOutlined, DeleteOutlined, PlusOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
@@ -7,9 +7,10 @@ import dayjs from 'dayjs';
 import { useAuthStore } from '@/store/authStore';
 import { useFuelStore } from '@/store/fuelStore';
 import { formatCost, formatConsumption } from '@/utils/format';
+import { useMobile } from '@/hooks/useMobile';
 import type { RefuelRecordWithConsumption, RefuelRecord } from '@/types';
 
-const { Title } = Typography;
+const { Title, Text } = Typography;
 
 const FUEL_TYPE_OPTIONS: SelectProps['options'] = [
   { label: '92#', value: '92#' },
@@ -26,6 +27,7 @@ export default function RefuelList() {
   const [editingRecord, setEditingRecord] = useState<RefuelRecordWithConsumption | null>(null);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [editForm] = Form.useForm();
+  const isMobile = useMobile();
 
   const defaultVehicle = config?.vehicles.find((v) => v.isDefault) || config?.vehicles[0];
 
@@ -37,7 +39,6 @@ export default function RefuelList() {
 
   const sortedRecords = [...recordsWithConsumption].sort((a, b) => b.date.localeCompare(a.date));
 
-  // 生成年份选项（当前年份往前5年）
   const yearOptions = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i);
 
   const handleEdit = (record: RefuelRecordWithConsumption) => {
@@ -167,32 +168,69 @@ export default function RefuelList() {
     return <Typography.Text>请先添加车辆</Typography.Text>;
   }
 
+  const renderMobileRecord = (record: RefuelRecordWithConsumption) => (
+    <Card key={record.id} size="small" style={{ marginBottom: 8 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <div style={{ flex: 1 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Text strong>{record.date}</Text>
+            <Text style={{ color: record.consumption !== null ? '#1890ff' : '#999', fontWeight: 600 }}>
+              {formatConsumption(record.consumption)}
+            </Text>
+          </div>
+          <div style={{ display: 'flex', gap: 12, marginTop: 4, color: '#666', fontSize: 13, flexWrap: 'wrap' }}>
+            <span>{record.odometer.toLocaleString()} km</span>
+            <span>{record.fuelAmount}L</span>
+            <span>{formatCost(record.totalCost)}</span>
+            {record.isFullTank && <Tag color="blue" style={{ margin: 0 }}>加满</Tag>}
+          </div>
+        </div>
+        <Space size={4} style={{ marginLeft: 8 }}>
+          <Button type="text" size="small" icon={<EditOutlined />} onClick={() => handleEdit(record)} />
+          <Button type="text" size="small" danger icon={<DeleteOutlined />} onClick={() => handleDelete(record)} />
+        </Space>
+      </div>
+    </Card>
+  );
+
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-        <Title level={4} style={{ margin: 0 }}>加油记录</Title>
-        <Space>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: isMobile ? 8 : 16, flexWrap: 'wrap', gap: 8 }}>
+        <Title level={4} style={{ margin: 0, fontSize: isMobile ? 16 : undefined }}>加油记录</Title>
+        <Space size={8}>
           <Select
             value={selectedYear}
             onChange={setSelectedYear}
             style={{ width: 100 }}
             options={yearOptions.map((y) => ({ label: `${y}年`, value: y }))}
           />
-          <Button type="primary" icon={<PlusOutlined />} onClick={() => navigate('/refuel/add')}>
-            添加加油
-          </Button>
+          {!isMobile && (
+            <Button type="primary" icon={<PlusOutlined />} onClick={() => navigate('/refuel/add')}>
+              添加加油
+            </Button>
+          )}
         </Space>
       </div>
 
-      <Table
-        dataSource={sortedRecords}
-        columns={columns}
-        rowKey="id"
-        loading={loading}
-        pagination={{ pageSize: 20, showSizeChanger: false }}
-        scroll={{ x: 700 }}
-        size="middle"
-      />
+      {isMobile ? (
+        <div>
+          {sortedRecords.length === 0 ? (
+            <Typography.Text type="secondary">暂无记录</Typography.Text>
+          ) : (
+            sortedRecords.map(renderMobileRecord)
+          )}
+        </div>
+      ) : (
+        <Table
+          dataSource={sortedRecords}
+          columns={columns}
+          rowKey="id"
+          loading={loading}
+          pagination={{ pageSize: 20, showSizeChanger: false }}
+          scroll={{ x: 700 }}
+          size="middle"
+        />
+      )}
 
       <Modal
         title="编辑加油记录"
@@ -200,7 +238,8 @@ export default function RefuelList() {
         onOk={handleEditSubmit}
         onCancel={() => { setEditModalVisible(false); setEditingRecord(null); }}
         okText="保存"
-        width={500}
+        width={isMobile ? '100%' : 500}
+        style={isMobile ? { top: 8, maxWidth: '100vw', margin: '0 8px' } : undefined}
       >
         <Form form={editForm} layout="vertical">
           <Form.Item name="date" label="日期" rules={[{ required: true }]}>
@@ -218,7 +257,7 @@ export default function RefuelList() {
           <Form.Item name="totalCost" label="总金额 (元)">
             <InputNumber style={{ width: '100%' }} min={0} precision={2} />
           </Form.Item>
-          <Space size="large">
+          <Space size="large" style={{ flexDirection: isMobile ? 'column' : undefined }}>
             <Form.Item name="isFullTank" label="加满" valuePropName="checked">
               <Switch />
             </Form.Item>

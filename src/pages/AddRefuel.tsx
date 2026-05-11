@@ -5,6 +5,7 @@ import dayjs from 'dayjs';
 import { v4 as uuidv4 } from 'uuid';
 import { useAuthStore } from '@/store/authStore';
 import { useFuelStore } from '@/store/fuelStore';
+import { useMobile } from '@/hooks/useMobile';
 import type { RefuelRecord } from '@/types';
 
 const { Title } = Typography;
@@ -37,6 +38,7 @@ export default function AddRefuel() {
   const [manualCost, setManualCost] = useState(false);
   const { user, config } = useAuthStore();
   const { addRecord, recordsWithConsumption } = useFuelStore();
+  const isMobile = useMobile();
 
   const defaultVehicle = config?.vehicles.find((v) => v.isDefault) || config?.vehicles[0];
 
@@ -115,7 +117,7 @@ export default function AddRefuel() {
 
   return (
     <div style={{ maxWidth: 600, margin: '0 auto' }}>
-      <Title level={4}>添加加油记录</Title>
+      <Title level={4} style={isMobile ? { fontSize: 16 } : undefined}>添加加油记录</Title>
       <Card>
         <Form
           form={form}
@@ -169,7 +171,7 @@ export default function AddRefuel() {
             />
           </Form.Item>
 
-          <Space size="large" style={{ marginBottom: 24 }}>
+          <Space size="large" style={{ marginBottom: 24, flexDirection: isMobile ? 'column' : undefined }}>
             <Form.Item name="isFullTank" label="是否加满" valuePropName="checked">
               <Switch checkedChildren="加满" unCheckedChildren="未满" />
             </Form.Item>
@@ -191,14 +193,20 @@ export default function AddRefuel() {
           </Form.Item>
 
           <Form.Item>
-            <Space>
-              <Button type="primary" htmlType="submit" loading={submitting} size="large">
+            {isMobile ? (
+              <Button type="primary" htmlType="submit" loading={submitting} size="large" block style={{ marginBottom: 8 }}>
                 保存记录
               </Button>
-              <Button onClick={() => navigate(-1)} size="large">
-                取消
-              </Button>
-            </Space>
+            ) : (
+              <Space>
+                <Button type="primary" htmlType="submit" loading={submitting} size="large">
+                  保存记录
+                </Button>
+                <Button onClick={() => navigate(-1)} size="large">
+                  取消
+                </Button>
+              </Space>
+            )}
           </Form.Item>
         </Form>
       </Card>
