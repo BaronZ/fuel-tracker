@@ -9,6 +9,7 @@ interface FuelState {
   loading: boolean;
 
   loadYearData: (owner: string, vehicleId: string, year: number) => Promise<void>;
+  loadDateRange: (owner: string, vehicleId: string, startDate: string, endDate: string) => Promise<void>;
   addRecord: (owner: string, vehicleId: string, record: RefuelRecord) => Promise<void>;
   updateRecord: (owner: string, vehicleId: string, record: RefuelRecord) => Promise<void>;
   deleteRecord: (owner: string, vehicleId: string, recordId: string) => Promise<void>;
