@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Card, Col, Row, Statistic, Table, Button, Empty, Spin, Typography, Select } from 'antd';
+import { Card, Col, Row, Statistic, Table, Button, Empty, Spin, Typography, DatePicker, Space } from 'antd';
 import {
   CarOutlined,
   DollarOutlined,
@@ -9,6 +9,7 @@ import {
   PlusOutlined,
 } from '@ant-design/icons';
 import ReactECharts from 'echarts-for-react';
+import dayjs from 'dayjs';
 import { useAuthStore } from '@/store/authStore';
 import { useFuelStore } from '@/store/fuelStore';
 import { calculateStats, calculateMonthlyCosts } from '@/utils/consumption';
@@ -21,20 +22,21 @@ const { Title, Text } = Typography;
 export default function Dashboard() {
   const navigate = useNavigate();
   const { user, config } = useAuthStore();
-  const { recordsWithConsumption, loadYearData, loading } = useFuelStore();
+  const { recordsWithConsumption, loadDateRange, loading } = useFuelStore();
   const [stats, setStats] = useState<ReturnType<typeof calculateStats> | null>(null);
   const [monthlyCosts, setMonthlyCosts] = useState<ReturnType<typeof calculateMonthlyCosts>>([]);
-  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [startDate, setStartDate] = useState(dayjs().startOf('year'));
+  const [endDate, setEndDate] = useState(dayjs());
   const isMobile = useMobile();
 
   const defaultVehicle = config?.vehicles.find((v) => v.isDefault) || config?.vehicles[0];
-  const yearOptions = Array.from({ length: 10 }, (_, i) => new Date().getFullYear() - i);
+  const currentYear = new Date().getFullYear();
 
   useEffect(() => {
     if (user?.login && defaultVehicle) {
-      loadYearData(user.login, defaultVehicle.id, selectedYear);
+      loadDateRange(user.login, defaultVehicle.id, startDate.format('YYYY-MM-DD'), endDate.format('YYYY-MM-DD'));
     }
-  }, [user?.login, defaultVehicle?.id, selectedYear]);
+  }, [user?.login, defaultVehicle?.id, startDate.format('YYYY-MM-DD'), endDate.format('YYYY-MM-DD')]);
 
   useEffect(() => {
     if (recordsWithConsumption.length > 0) {
@@ -47,6 +49,30 @@ export default function Dashboard() {
   }, [recordsWithConsumption]);
 
   const chartHeight = isMobile ? 220 : 280;
+
+  // 快捷按钮
+  const handleQuickRange = (type: 'thisYear' | 'lastYear' | 'all') => {
+    const today = dayjs();
+    if (type === 'thisYear') {
+      setStartDate(today.startOf('year'));
+      setEndDate(today);
+    } else if (type === 'lastYear') {
+      setStartDate(today.subtract(1, 'year'));
+      setEndDate(today);
+    } else {
+      setStartDate(dayjs('2010-01-01'));
+      setEndDate(today);
+    }
+  };
+
+  const formatDateLabel = (d: string) => {
+    const startYear = startDate.year();
+    const endYear = endDate.year();
+    if (startYear === endYear) {
+      return d.substring(5); // MM-DD
+    }
+    return d; // YYYY-MM-DD
+  };
 
   // 油耗趋势折线图
   const consumptionChartOption = {
@@ -62,7 +88,7 @@ export default function Dashboard() {
       type: 'category' as const,
       data: recordsWithConsumption
         .filter((r) => r.consumption !== null)
-        .map((r) => r.date.substring(5)),
+        .map((r) => formatDateLabel(r.date)),
     },
     yAxis: {
       type: 'value' as const,
@@ -161,7 +187,7 @@ export default function Dashboard() {
     grid: { top: 30, right: 20, bottom: 30, left: 50 },
     xAxis: {
       type: 'category' as const,
-      data: recordsWithConsumption.map((r) => r.date.substring(5)),
+      data: recordsWithConsumption.map((r) => formatDateLabel(r.date)),
     },
     yAxis: {
       type: 'value' as const,
@@ -243,19 +269,39 @@ export default function Dashboard() {
     </Card>
   );
 
+  const rangeText = startDate.year() === endDate.year()
+    ? `${startDate.year()}年`
+    : `${startDate.format('YYYY-MM-DD')} 至 ${endDate.format('YYYY-MM-DD')}`;
+
   return (
     <Spin spinning={loading}>
       <div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: isMobile ? 12 : 24 }}>
-          <Title level={4} style={{ margin: 0, fontSize: isMobile ? 16 : undefined }}>
-            {defaultVehicle.name} - {selectedYear}年
-          </Title>
-          <Select
-            value={selectedYear}
-            onChange={setSelectedYear}
-            style={{ width: 100 }}
-            options={yearOptions.map((y) => ({ label: `${y}年`, value: y }))}
-          />
+        <div style={{ marginBottom: isMobile ? 12 : 24 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+            <Title level={4} style={{ margin: 0, fontSize: isMobile ? 16 : undefined }}>
+              {defaultVehicle.name} - {rangeText}
+            </Title>
+          </div>
+          <Space style={{ marginTop: 8, flexWrap: 'wrap' }} size={8}>
+            <DatePicker
+              value={startDate}
+              onChange={(d) => d && setStartDate(d)}
+              format="YYYY-MM-DD"
+              allowClear={false}
+              style={{ width: 140 }}
+            />
+            <span>至</span>
+            <DatePicker
+              value={endDate}
+              onChange={(d) => d && setEndDate(d)}
+              format="YYYY-MM-DD"
+              allowClear={false}
+              style={{ width: 140 }}
+            />
+            <Button size="small" onClick={() => handleQuickRange('thisYear')}>今年</Button>
+            <Button size="small" onClick={() => handleQuickRange('lastYear')}>最近一年</Button>
+            <Button size="small" onClick={() => handleQuickRange('all')}>全部</Button>
+          </Space>
         </div>
 
         <Row gutter={[isMobile ? 8 : 16, isMobile ? 8 : 16]}>

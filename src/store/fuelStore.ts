@@ -38,14 +38,43 @@ export const useFuelStore = create<FuelState>((set, get) => ({
     }
   },
 
+  loadDateRange: async (owner: string, vehicleId: string, startDate: string, endDate: string) => {
+    set({ loading: true });
+    try {
+      const startYear = parseInt(startDate.substring(0, 4));
+      const endYear = parseInt(endDate.substring(0, 4));
+      const allRecords: RefuelRecord[] = [];
+
+      for (let year = startYear; year <= endYear; year++) {
+        const data = await getYearData(owner, vehicleId, year);
+        if (data) {
+          allRecords.push(...data.records);
+        }
+      }
+
+      const uniqueRecords = Array.from(
+        new Map(allRecords.map((r) => [r.id, r])).values()
+      )
+        .filter((r) => r.date >= startDate && r.date <= endDate)
+        .sort((a, b) => a.date.localeCompare(b.date));
+
+      const withConsumption = calculateConsumptions(uniqueRecords);
+      set({ yearData: null, recordsWithConsumption: withConsumption });
+    } catch (error) {
+      console.error('Failed to load date range:', error);
+      set({ yearData: null, recordsWithConsumption: [] });
+    } finally {
+      set({ loading: false });
+    }
+  },
+
   addRecord: async (owner: string, vehicleId: string, record: RefuelRecord) => {
     set({ loading: true });
     try {
       await addRefuelRecord(owner, vehicleId, record);
-      // 重新加载数据
-      const { yearData } = get();
+      // 重新加载当前年份数据
       const year = parseInt(record.date.substring(0, 4));
-      await get().loadYearData(owner, vehicleId, yearData?.year || year);
+      await get().loadYearData(owner, vehicleId, year);
     } finally {
       set({ loading: false });
     }
