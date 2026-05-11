@@ -27,7 +27,7 @@ function App() {
           <Route path="/stats" element={<Stats />} />
           <Route path="/vehicles" element={<Vehicles />} />
           <Route path="/settings" element={<Settings />} />
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          <Route path="/" element={<Navigate to="/refuel/add" replace />} />
         </Route>
       </Routes>
     </BrowserRouter>
