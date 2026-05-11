@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Card, Col, Row, Statistic, Table, Button, Empty, Spin, Typography } from 'antd';
+import { Card, Col, Row, Statistic, Table, Button, Empty, Spin, Typography, Select } from 'antd';
 import {
   CarOutlined,
   DollarOutlined,
@@ -11,7 +11,7 @@ import {
 import ReactECharts from 'echarts-for-react';
 import { useAuthStore } from '@/store/authStore';
 import { useFuelStore } from '@/store/fuelStore';
-import { calculateStats } from '@/utils/consumption';
+import { calculateStats, calculateMonthlyCosts } from '@/utils/consumption';
 import { formatCost, formatConsumption } from '@/utils/format';
 
 const { Title } = Typography;
@@ -21,27 +21,38 @@ export default function Dashboard() {
   const { user, config } = useAuthStore();
   const { recordsWithConsumption, loadYearData, loading } = useFuelStore();
   const [stats, setStats] = useState<ReturnType<typeof calculateStats> | null>(null);
+  const [monthlyCosts, setMonthlyCosts] = useState<ReturnType<typeof calculateMonthlyCosts>>([]);
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
 
   const defaultVehicle = config?.vehicles.find((v) => v.isDefault) || config?.vehicles[0];
-  const currentYear = new Date().getFullYear();
+  const yearOptions = Array.from({ length: 5 }, (_, i) => new Date().getFullYear() - i);
 
   useEffect(() => {
     if (user?.login && defaultVehicle) {
-      loadYearData(user.login, defaultVehicle.id, currentYear);
+      loadYearData(user.login, defaultVehicle.id, selectedYear);
     }
-  }, [user?.login, defaultVehicle?.id]);
+  }, [user?.login, defaultVehicle?.id, selectedYear]);
 
   useEffect(() => {
     if (recordsWithConsumption.length > 0) {
       setStats(calculateStats(recordsWithConsumption));
+      setMonthlyCosts(calculateMonthlyCosts(recordsWithConsumption));
     } else {
       setStats(null);
+      setMonthlyCosts([]);
     }
   }, [recordsWithConsumption]);
 
-  // 油耗趋势迷你图
-  const miniChartOption = {
-    grid: { top: 10, right: 10, bottom: 20, left: 40 },
+  // 油耗趋势折线图
+  const consumptionChartOption = {
+    tooltip: {
+      trigger: 'axis' as const,
+      formatter: (params: Array<{ name: string; value: number }>) => {
+        const p = params[0];
+        return `${p.name}<br/>油耗: ${p.value.toFixed(2)} L/100km`;
+      },
+    },
+    grid: { top: 30, right: 20, bottom: 30, left: 50 },
     xAxis: {
       type: 'category' as const,
       data: recordsWithConsumption
@@ -61,10 +72,101 @@ export default function Dashboard() {
           .map((r) => r.consumption),
         smooth: true,
         itemStyle: { color: '#1890ff' },
-        areaStyle: { color: 'rgba(24,144,255,0.1)' },
+        areaStyle: {
+          color: {
+            type: 'linear' as const,
+            x: 0, y: 0, x2: 0, y2: 1,
+            colorStops: [
+              { offset: 0, color: 'rgba(24,144,255,0.3)' },
+              { offset: 1, color: 'rgba(24,144,255,0.02)' },
+            ],
+          },
+        },
+        markLine: stats?.avgConsumption
+          ? {
+              data: [{ yAxis: stats.avgConsumption, name: '平均' }],
+              lineStyle: { color: '#ff4d4f', type: 'dashed' as const },
+              label: { formatter: `平均 ${stats.avgConsumption.toFixed(2)}` },
+            }
+          : undefined,
       },
     ],
-    tooltip: { trigger: 'axis' as const },
+  };
+
+  // 月度费用柱状图
+  const monthlyCostChartOption = {
+    tooltip: {
+      trigger: 'axis' as const,
+      formatter: (params: Array<{ name: string; value: number }>) => {
+        const p = params[0];
+        return `${p.name}<br/>费用: ¥${p.value.toFixed(2)}`;
+      },
+    },
+    grid: { top: 30, right: 20, bottom: 30, left: 60 },
+    xAxis: {
+      type: 'category' as const,
+      data: monthlyCosts.map((m) => m.month),
+    },
+    yAxis: {
+      type: 'value' as const,
+      name: '元',
+    },
+    series: [
+      {
+        type: 'bar' as const,
+        data: monthlyCosts.map((m) => m.cost),
+        itemStyle: {
+          color: {
+            type: 'linear' as const,
+            x: 0, y: 0, x2: 0, y2: 1,
+            colorStops: [
+              { offset: 0, color: '#1890ff' },
+              { offset: 1, color: '#69c0ff' },
+            ],
+          },
+          borderRadius: [4, 4, 0, 0],
+        },
+      },
+    ],
+  };
+
+  // 油价变化趋势
+  const priceChartOption = {
+    tooltip: {
+      trigger: 'axis' as const,
+      formatter: (params: Array<{ name: string; value: number }>) => {
+        const p = params[0];
+        return `${p.name}<br/>单价: ¥${p.value.toFixed(2)}/L`;
+      },
+    },
+    grid: { top: 30, right: 20, bottom: 30, left: 50 },
+    xAxis: {
+      type: 'category' as const,
+      data: recordsWithConsumption.map((r) => r.date.substring(5)),
+    },
+    yAxis: {
+      type: 'value' as const,
+      name: '元/L',
+      min: (value: { min: number }) => Math.floor(value.min * 10 - 1) / 10,
+    },
+    series: [
+      {
+        type: 'line' as const,
+        data: recordsWithConsumption.map((r) => r.fuelPrice),
+        smooth: true,
+        itemStyle: { color: '#faad14' },
+        areaStyle: {
+          color: {
+            type: 'linear' as const,
+            x: 0, y: 0, x2: 0, y2: 1,
+            colorStops: [
+              { offset: 0, color: 'rgba(250,173,20,0.3)' },
+              { offset: 1, color: 'rgba(250,173,20,0.02)' },
+            ],
+          },
+        },
+      },
+    ],
   };
 
   // 最近 5 次加油
@@ -102,9 +204,17 @@ export default function Dashboard() {
   return (
     <Spin spinning={loading}>
       <div>
-        <Title level={4} style={{ marginBottom: 24 }}>
-          {defaultVehicle.name} - {currentYear}年
-        </Title>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+          <Title level={4} style={{ margin: 0 }}>
+            {defaultVehicle.name} - {selectedYear}年
+          </Title>
+          <Select
+            value={selectedYear}
+            onChange={setSelectedYear}
+            style={{ width: 100 }}
+            options={yearOptions.map((y) => ({ label: `${y}年`, value: y }))}
+          />
+        </div>
 
         <Row gutter={[16, 16]}>
           <Col xs={12} sm={6}>
@@ -150,39 +260,55 @@ export default function Dashboard() {
           </Col>
         </Row>
 
-        {/* 油耗趋势 */}
-        {recordsWithConsumption.some((r) => r.consumption !== null) && (
-          <Card title="油耗趋势" style={{ marginTop: 16 }}>
-            <ReactECharts option={miniChartOption} style={{ height: 250 }} />
-          </Card>
-        )}
-
-        {/* 最近加油记录 */}
-        <Card
-          title="最近加油记录"
-          style={{ marginTop: 16 }}
-          extra={
-            <Button type="link" onClick={() => navigate('/refuel/list')}>
-              查看全部
+        {recordsWithConsumption.length === 0 ? (
+          <Empty description="暂无加油记录" style={{ marginTop: 40 }}>
+            <Button type="primary" icon={<PlusOutlined />} onClick={() => navigate('/refuel/add')}>
+              添加加油记录
             </Button>
-          }
-        >
-          {recentRecords.length > 0 ? (
-            <Table
-              dataSource={recentRecords}
-              columns={columns}
-              rowKey="id"
-              pagination={false}
-              size="small"
-            />
-          ) : (
-            <Empty description="暂无加油记录">
-              <Button type="primary" icon={<PlusOutlined />} onClick={() => navigate('/refuel/add')}>
-                添加加油记录
-              </Button>
-            </Empty>
-          )}
-        </Card>
+          </Empty>
+        ) : (
+          <>
+            {/* 油耗趋势 */}
+            {recordsWithConsumption.some((r) => r.consumption !== null) && (
+              <Card title="油耗趋势" style={{ marginTop: 16 }}>
+                <ReactECharts option={consumptionChartOption} style={{ height: 280 }} />
+              </Card>
+            )}
+
+            {/* 月度费用 */}
+            {monthlyCosts.length > 0 && (
+              <Card title="月度费用" style={{ marginTop: 16 }}>
+                <ReactECharts option={monthlyCostChartOption} style={{ height: 280 }} />
+              </Card>
+            )}
+
+            {/* 油价变化 */}
+            {recordsWithConsumption.length > 1 && (
+              <Card title="油价变化" style={{ marginTop: 16 }}>
+                <ReactECharts option={priceChartOption} style={{ height: 280 }} />
+              </Card>
+            )}
+
+            {/* 最近加油记录 */}
+            <Card
+              title="最近加油记录"
+              style={{ marginTop: 16 }}
+              extra={
+                <Button type="link" onClick={() => navigate('/refuel/list')}>
+                  查看全部
+                </Button>
+              }
+            >
+              <Table
+                dataSource={recentRecords}
+                columns={columns}
+                rowKey="id"
+                pagination={false}
+                size="small"
+              />
+            </Card>
+          </>
+        )}
       </div>
     </Spin>
   );

@@ -5,7 +5,6 @@ import Login from '@/pages/Login';
 import Dashboard from '@/pages/Dashboard';
 import AddRefuel from '@/pages/AddRefuel';
 import RefuelList from '@/pages/RefuelList';
-import Stats from '@/pages/Stats';
 import Vehicles from '@/pages/Vehicles';
 import Settings from '@/pages/Settings';
 
@@ -24,10 +23,9 @@ function App() {
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/refuel/add" element={<AddRefuel />} />
           <Route path="/refuel/list" element={<RefuelList />} />
-          <Route path="/stats" element={<Stats />} />
           <Route path="/vehicles" element={<Vehicles />} />
           <Route path="/settings" element={<Settings />} />
-          <Route path="/" element={<Navigate to="/refuel/add" replace />} />
+          <Route path="/" element={<Navigate to="/dashboard" replace />} />
         </Route>
       </Routes>
     </BrowserRouter>

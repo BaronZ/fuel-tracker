@@ -5,7 +5,6 @@ import {
   DashboardOutlined,
   PlusCircleOutlined,
   UnorderedListOutlined,
-  BarChartOutlined,
   CarOutlined,
   SettingOutlined,
   LogoutOutlined,
@@ -20,7 +19,6 @@ const menuItems = [
   { key: '/dashboard', icon: <DashboardOutlined />, label: '仪表盘' },
   { key: '/refuel/add', icon: <PlusCircleOutlined />, label: '添加加油' },
   { key: '/refuel/list', icon: <UnorderedListOutlined />, label: '加油记录' },
-  { key: '/stats', icon: <BarChartOutlined />, label: '统计分析' },
   { key: '/vehicles', icon: <CarOutlined />, label: '车辆管理' },
   { key: '/settings', icon: <SettingOutlined />, label: '设置' },
 ];
