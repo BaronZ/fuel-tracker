@@ -96,7 +96,7 @@ export default function AddRefuel() {
 
       await addRecord(user.login, defaultVehicle.id, record);
       message.success('加油记录已保存');
-      navigate('/refuel/list');
+      navigate('/stats');
     } catch (error) {
       console.error('Failed to save record:', error);
       message.error('保存失败，请重试');
