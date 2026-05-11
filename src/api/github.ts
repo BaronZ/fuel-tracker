@@ -71,7 +71,7 @@ async function getFileContent(owner: string, path: string): Promise<{ content: s
   const client = getClient();
   try {
     const { data } = await client.get(`/repos/${owner}/${REPO_NAME}/contents/${path}`);
-    const content = atob(data.content.replace(/\n/g, ''));
+    const content = decodeURIComponent(escape(atob(data.content.replace(/\n/g, ''))));
     return { content, sha: data.sha };
   } catch (error: unknown) {
     if (axios.isAxiosError(error) && error.response?.status === 404) {
